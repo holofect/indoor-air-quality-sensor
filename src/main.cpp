@@ -3,6 +3,7 @@
 #include <BlynkSimpleEsp8266.h>
 #include <MHZ19.h>
 #include <SoftwareSerial.h>
+#include "config.cpp"
 
 #define RX_PIN D3                                          // Rx pin which the MHZ19 Tx pin is attached to
 #define TX_PIN D4                                          // Tx pin which the MHZ19 Rx pin is attached to
@@ -20,8 +21,9 @@ unsigned long getDataTimer = 0;
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 BME280I2C bme;
 
-const char *ssid = "ssid";
-const char *pass = "pass";
+// Wifi credentials imported from config.cpp
+// const char *ssid = "ssid";
+// const char *pass = "pass";
 
 const char blynk_auth[] = "VI0YXm-pivgiFESgYX4noYhsrbfrFt5Q"; //"Bedroom"
 int alarm;
@@ -89,3 +91,20 @@ void loop() {
     Blynk.virtualWrite(V3, hum);
 
     Blynk.virtualWrite(V4, co2);
+    Blynk.virtualWrite(V5, etemp);
+        
+    display.setTextSize(1);
+    display.setTextColor(WHITE);
+    display.setCursor(0,0);
+    display.println("Temp: " + String(temp) + " C");
+    display.drawRect(67, 0, 3, 3, WHITE);
+    display.println("Pressure: " + String(pres) + " Pa");
+    display.println("Humidity: " + String(hum) + "%\n");
+    display.println("CO2: " + String(co2) + " ppm");
+    display.println("eTemp: " + String(etemp) + " C");
+    display.display();
+
+    display.clearDisplay();
+    getDataTimer = millis();    
+  }
+}
