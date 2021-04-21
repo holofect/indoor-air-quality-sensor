@@ -1,4 +1,4 @@
 .pio
 .vscode
-platform.ini
+platformio.ini
 include/config.cpp
