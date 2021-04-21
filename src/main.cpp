@@ -24,8 +24,8 @@ BME280I2C bme;
 // Wifi credentials imported from config.cpp
 // const char *ssid = "ssid";
 // const char *pass = "pass";
+// const char blynk_auth[] = "blynk_token";
 
-const char blynk_auth[] = "VI0YXm-pivgiFESgYX4noYhsrbfrFt5Q"; //"Bedroom"
 int alarm;
 
 void setup() {
