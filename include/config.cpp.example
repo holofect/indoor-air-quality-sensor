@@ -1,3 +1,4 @@
 // Replace the below with your wifi credentials
 const char *ssid = "ssid";
 const char *pass = "password";
+const char blynk_auth[] = "blynk_token";
