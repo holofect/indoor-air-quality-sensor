@@ -47,6 +47,8 @@ void setup() {
     display.display();
   }
 
+  co2sensor.autoCalibration(); // Turn auto calibration ON (OFF autoCalibration(false))
+
   Blynk.begin(blynk_auth, ssid, pass);
   display.clearDisplay();
 }
@@ -71,7 +73,6 @@ void send_to_blynk(float pres, float temp, float hum, float co2, float etemp){
   Blynk.virtualWrite(V3, hum);
   Blynk.virtualWrite(V4, co2);
   Blynk.virtualWrite(V5, etemp);
-
 }
 
 void loop() {
@@ -92,6 +93,7 @@ void loop() {
   
     show_display(pres, temp, hum, co2, etemp);
     show_display(pres, temp, hum, co2, etemp);
+    send_to_blynk(pres, temp, hum, co2, etemp);
 
     getDataTimer = millis();  // Soft sleep
   }
