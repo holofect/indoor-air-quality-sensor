@@ -5,20 +5,53 @@
 #include <SoftwareSerial.h>
 #include "config.cpp" // Configuration for WiFi and Blynk
 
-#define RX_PIN D3                                          // Rx pin which the MHZ19 Tx pin is attached to
-#define TX_PIN D4                                          // Tx pin which the MHZ19 Rx pin is attached to
+#define RX_PIN D5                                          // Rx pin which the MHZ19 Tx pin is attached to
+#define TX_PIN D6                                          // Tx pin which the MHZ19 Rx pin is attached to
 #define BAUDRATE 9600                                      // Device to MH-Z19 Serial baudrate (should not be changed)
 
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
 #define OLED_RESET LED_BUILTIN // Reset pin #
 
+#define calibrationButton D8
+#define calibrationPin D4
+
 MHZ19 co2sensor; // Constructor for MHZ219
 SoftwareSerial co2Serial(RX_PIN, TX_PIN); // Serial connection with MHZ219
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET); // Constructor for SSD1306
 BME280I2C bme; // Constructor for BME280
 
-unsigned long getDataTimer = 0;
+unsigned long loopTimer = 0;
+unsigned long calibrationTimer = 0;
+
+void show_display(float pres, float temp, float hum, float co2, float etemp) {
+  display.clearDisplay(); // Clear display buffer
+  display.setTextSize(1);
+  display.setTextColor(WHITE);
+  display.setCursor(0,0);
+  display.println("Temp: " + String(temp) + " C");
+  display.drawRect(67, 0, 3, 3, WHITE);
+  display.println("Pressure: " + String(pres) + " Pa");
+  display.println("Humidity: " + String(hum) + "%\n");
+  display.println("CO2: " + String(co2) + " ppm");
+  display.println("eTemp: " + String(etemp) + " C");
+  display.display();
+}
+
+void send_to_blynk(float pres, float temp, float hum, float co2, float etemp){
+  Blynk.virtualWrite(V1, pres);
+  Blynk.virtualWrite(V2, temp);
+  Blynk.virtualWrite(V3, hum);
+  Blynk.virtualWrite(V4, co2);
+  Blynk.virtualWrite(V5, etemp);
+}
+
+ICACHE_RAM_ATTR void calibrate_mhz19(){
+  Serial.println("Button Pressed.");
+  co2sensor.autoCalibration(false); // Turn auto calibration ON (OFF autoCalibration(false))
+  digitalWrite(calibrationPin, LOW);
+  calibrationTimer = millis();
+}
 
 void setup() {
   Serial.begin(9600);
@@ -48,34 +81,13 @@ void setup() {
   }
 
   Blynk.begin(blynk_auth, ssid, pass);
-  display.clearDisplay();
-}
+  //display.clearDisplay();
 
-void show_display(float pres, float temp, float hum, float co2, float etemp) {
-  display.clearDisplay(); // Clear display buffer
-  display.setTextSize(1);
-  display.setTextColor(WHITE);
-  display.setCursor(0,0);
-  display.println("Temp: " + String(temp) + " C");
-  display.drawRect(67, 0, 3, 3, WHITE);
-  display.println("Pressure: " + String(pres) + " Pa");
-  display.println("Humidity: " + String(hum) + "%\n");
-  display.println("CO2: " + String(co2) + " ppm");
-  display.println("eTemp: " + String(etemp) + " C");
-  display.display();
-}
-
-void send_to_blynk(float pres, float temp, float hum, float co2, float etemp){
-  Blynk.virtualWrite(V1, pres);
-  Blynk.virtualWrite(V2, temp);
-  Blynk.virtualWrite(V3, hum);
-  Blynk.virtualWrite(V4, co2);
-  Blynk.virtualWrite(V5, etemp);
-
+  attachInterrupt(digitalPinToInterrupt(calibrationButton), calibrate_mhz19, RISING);
 }
 
 void loop() {
-  if (millis() - getDataTimer >= 2000){
+  //if (millis() - loopTimer >= 10000){
     Blynk.run();  // Establish WiFi and link to Blynk
 
     float temp(NAN), hum(NAN), pres(NAN);        
@@ -91,8 +103,16 @@ void loop() {
     bme.read(pres, temp, hum); // Read data from BME280
   
     show_display(pres, temp, hum, co2, etemp);
-    show_display(pres, temp, hum, co2, etemp);
+    send_to_blynk(pres, temp, hum, co2, etemp);
 
-    getDataTimer = millis();  // Soft sleep
-  }
+    if ((digitalRead(calibrationPin) == LOW) && (millis() - calibrationTimer >= 8000)) {      
+      digitalWrite(calibrationPin, HIGH);
+      co2Serial.begin(BAUDRATE);
+      co2sensor.begin(co2Serial);
+      co2sensor.autoCalibration(false);
+    }
+    delay(8000);
+    //loopTimer = millis();  // Soft sleep
+    //ESP.deepSleep(4e6);
+  //}
 }
