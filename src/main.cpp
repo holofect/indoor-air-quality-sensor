@@ -74,7 +74,7 @@ void setup() {
     Serial.println("BME280 failed");
     display.println("BME280 failed");
     display.display();
-    sleep(1);
+    sleep(3);
     display.clearDisplay(); // Clear display buffer
     while(1); // Will trip WDT and reset
   }
