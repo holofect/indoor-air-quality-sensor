@@ -1,10 +1,3 @@
-//#define BLYNK_TEMPLATE_ID "TMPLyzvlR6NP"
-//#define BLYNK_DEVICE_NAME "Room Monitor"
-//#define BLYNK_FIRMWARE_VERSION        "0.1.0"
-//#define BLYNK_PRINT Serial
-// #define USE_NODE_MCU_BOARD
-//#include "BlynkEdgent.h"
-
 #include <Adafruit_SSD1306.h>
 #include <Adafruit_BME280.h>
 //#include <BME280I2C.h>
@@ -110,13 +103,10 @@ void setup() {
     sleep(1);
     display.clearDisplay(); // Clear display buffer
   }
-
   Serial.println("Ready");
   display.println("Ready");
   display.display();
   sleep(1);
-
-  //BlynkEdgent.begin();
   display.clearDisplay();
 }
 
@@ -135,16 +125,7 @@ void show_display(float temp, float pres, float hum, int co2, int co) {
   display.display();
 }
 
-//void send_to_blynk(float pres, float temp, float hum, float co2, float etemp){
-//  Blynk.virtualWrite(V1, pres);
-//  Blynk.virtualWrite(V2, temp);
-//  Blynk.virtualWrite(V3, hum);
-//  Blynk.virtualWrite(V4, co2);
-//  Blynk.virtualWrite(V5, etemp);
-//}
-
 void loop() {
-  //BlynkEdgent.run();
   if (millis() - getDataTimer >= 2000){
 
     float temp(NAN), pres(NAN), hum(NAN), co2(NAN), etemp(NAN);        
@@ -162,7 +143,6 @@ void loop() {
     int co = analogRead(mq7Pin);  // Read analog value (0–4095)
     Serial.println("co2 reading: " + String(co2) + " ppm"); 
     show_display(temp, pres, hum, co2, co);
-    //send_to_blynk(pres, temp, hum, co2, etemp);
     if (co2 < 600){
       digitalWrite (ledGreenPin, HIGH);
       digitalWrite (ledYellowPin, LOW);
