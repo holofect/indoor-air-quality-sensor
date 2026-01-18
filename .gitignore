@@ -1,4 +1,5 @@
 .pio
 .vscode
+src/wifi_secrets.h
 platformio.ini
 include/config.cpp

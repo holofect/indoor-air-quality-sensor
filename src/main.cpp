@@ -1,18 +1,18 @@
 //#define BLYNK_TEMPLATE_ID "TMPLyzvlR6NP"
 //#define BLYNK_DEVICE_NAME "Room Monitor"
-
 //#define BLYNK_FIRMWARE_VERSION        "0.1.0"
 //#define BLYNK_PRINT Serial
-const int led_gpio = 32; // LED light for esp32
-
 // #define USE_NODE_MCU_BOARD
-
 //#include "BlynkEdgent.h"
 
 #include <Adafruit_SSD1306.h>
 #include <Adafruit_BME280.h>
 //#include <BME280I2C.h>
 #include <MHZ19.h>
+#include <WiFi.h>
+#include "wifi_secrets.h"
+
+uint64_t chipid = ESP.getEfuseMac();  // 48-bit unique ID
 
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
@@ -27,6 +27,11 @@ const int led_gpio = 32; // LED light for esp32
 
 // ---> if ESP32 (Hardware serial builtin with UARTs)
 #define OLED_RESET led_gpio // Resest pin for # ESP32
+#define BAUDRATE 9600
+#define mq7Pin 34  // GPIO 34 for analog input
+
+const int led_gpio = 32; // LED light for esp32
+
 HardwareSerial co2Serial(2);
 
 MHZ19 co2sensor; // Constructor for MHZ219
@@ -41,8 +46,27 @@ const int ledYellowPin = 18;
 const int ledRedPin = 5;
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(BAUDRATE);
+  Serial.printf("ESP32 Chip ID: %04X%08X\n",
+    (uint16_t)(chipid >> 32),
+    (uint32_t)chipid);
   Serial.println("Initializing...");
+
+  String ssid;
+  String password;
+
+  Serial.println("ssid: " + String(WIFI_SSID));
+  Serial.println("password: " + String(WIFI_PASS));
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(WIFI_SSID, WIFI_PASS);
+  Serial.println("Connecting to WiFi");
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+
+  Serial.println("\nConnected");
+  Serial.println(WiFi.localIP());
 
   pinMode (ledGreenPin, OUTPUT);
   pinMode (ledYellowPin, OUTPUT);
@@ -53,6 +77,7 @@ void setup() {
   // ---
 
   // ---> ESP32
+  co2Serial.begin(BAUDRATE);
   co2sensor.begin(co2Serial);
   // ---
 
@@ -95,16 +120,17 @@ void setup() {
   display.clearDisplay();
 }
 
-void show_display(float temp, float pres, float hum, int co2) {
+void show_display(float temp, float pres, float hum, int co2, int co) {
   display.clearDisplay(); // Clear display buffer
   display.setTextSize(1);
   display.setTextColor(WHITE);
   display.setCursor(0,0);
   display.println("Temp: " + String(temp) + " C");
   display.drawRect(67, 0, 3, 3, WHITE);
-  display.println("Pressure: " + String(pres) + " Pa");
+  display.println("Pressure: " + String((int)pres) + " mbar");
   display.println("Humidity: " + String(hum) + "%\n");
   display.println("CO2: " + String(co2) + " ppm");
+  //display.println("CO: " + String(co) + " ppm");
   //display.println("eTemp: " + String(etemp) + " C");
   display.display();
 }
@@ -129,12 +155,13 @@ void loop() {
     usual documented command with getCO2(false) */
 
     temp = bme.readTemperature(); // Read temperature from BME280
-    pres = bme.readPressure();
+    pres = (bme.readPressure() / 100); // Read Pressure in Pascals, convert to mbar
     hum = bme.readHumidity();
     co2 = co2sensor.getCO2(); // Read CO2 (as ppm)
     etemp = co2sensor.getTemperature(); // Read temperature estimate from MHZ219
-  
-    show_display(temp, pres, hum, co2);
+    int co = analogRead(mq7Pin);  // Read analog value (0–4095)
+    Serial.println("co2 reading: " + String(co2) + " ppm"); 
+    show_display(temp, pres, hum, co2, co);
     //send_to_blynk(pres, temp, hum, co2, etemp);
     if (co2 < 600){
       digitalWrite (ledGreenPin, HIGH);
@@ -148,10 +175,14 @@ void loop() {
     }
     else{
       digitalWrite (ledGreenPin, LOW);
-      digitalWrite (ledYellowPin, LOW);     
+      if (ledYellowPin == LOW){
+        digitalWrite (ledYellowPin, HIGH);
+      }
+      else{
+        ledYellowPin == LOW;
+      }    
       digitalWrite (ledRedPin, HIGH);    
     }
-
     getDataTimer = millis();  // Soft sleep
   }
 }
